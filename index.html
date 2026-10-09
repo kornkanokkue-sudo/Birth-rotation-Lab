@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Birth Rotation Lab | Interactive Mechanism of Labour</title>
+<meta name="description" content="Interactive learning prototype for nursing students: PV findings, fetal position, internal rotation, extension, restitution, external rotation, and shoulder rotation.">
+<meta name="theme-color" content="#c2185b">
+<meta property="og:title" content="Birth Rotation Lab">
+<meta property="og:description" content="Interactive mechanism of labour challenge for nursing students.">
+<meta property="og:type" content="website">
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+
+<style>
+:root{
+  --pink:#c2185b; --pink2:#ec407a; --blue:#1565c0; --green:#1b5e20;
+  --green-bg:#e8f5e9; --red:#b71c1c; --red-bg:#ffebee;
+  --amber:#e65100; --amber-bg:#fff3e0; --text:#243447; --muted:#64748b;
+  --bg:#f4f7fb; --card:#fff;
+}
+*{box-sizing:border-box;font-family:Arial,"Noto Sans Thai",sans-serif}
+body{margin:0;background:var(--bg);color:var(--text)}
+header{
+  background:linear-gradient(90deg,var(--pink),var(--pink2));
+  color:#fff;text-align:center;padding:18px 22px
+}
+header h1{margin:0;font-size:28px}
+header p{margin:6px 0 0}
+.app{
+  max-width:1320px;margin:auto;padding:20px;
+  display:grid;grid-template-columns:1.05fr .95fr;gap:20px
+}
+.card{
+  background:var(--card);border-radius:20px;padding:20px;
+  box-shadow:0 6px 22px rgba(0,0,0,.08)
+}
+.topbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.pill{padding:8px 13px;border-radius:999px;font-size:13px;font-weight:bold}
+.pill.stage{background:#ede7f6;color:#512da8}
+.pill.score{background:#e8f5e9;color:#1b5e20}
+
+/* progress */
+.progress{
+  display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin:14px 0 18px
+}
+.step{
+  background:#edf1f6;color:#667085;border-radius:9px;padding:8px 3px;
+  font-size:11px;font-weight:bold;text-align:center
+}
+.step.active{background:#fce4ec;color:#ad1457;outline:2px solid #f8bbd0}
+.step.done{background:#e8f5e9;color:#1b5e20}
+
+/* model */
+.stage-wrap{display:flex;justify-content:center;align-items:center;min-height:575px}
+.pelvis{
+  width:500px;height:500px;position:relative;border-radius:50%;
+  border:23px solid #e4cfad;
+  background:conic-gradient(from -22.5deg,
+    #ffe082 0 45deg,#9fe2bb 45deg 90deg,#f5a0b7 90deg 135deg,
+    #8dc9f0 135deg 180deg,#c7ace8 180deg 225deg,#8dc9f0 225deg 270deg,
+    #f5a0b7 270deg 315deg,#9fe2bb 315deg 360deg);
+  box-shadow:inset 0 0 0 7px #fff,0 7px 20px rgba(0,0,0,.12)
+}
+.anterior,.posterior,.side-left,.side-right{
+  position:absolute;font-weight:bold;text-align:center;z-index:20
+}
+.anterior{top:-67px;left:0;width:100%}
+.posterior{bottom:-67px;left:0;width:100%}
+.side-left{left:-103px;top:48%;transform:rotate(-90deg)}
+.side-right{right:-112px;top:48%;transform:rotate(90deg)}
+.small{font-size:12px;color:#5f6368}
+.pos{
+  position:absolute;transform:translate(-50%,-50%);font-weight:bold;
+  text-align:center;line-height:1.05;z-index:1
+}
+.pOA{left:50%;top:13%}.pLOA{left:74%;top:25%}.pLOT{left:87%;top:50%}.pLOP{left:74%;top:75%}
+.pOP{left:50%;top:87%}.pROP{left:26%;top:75%}.pROT{left:13%;top:50%}.pROA{left:26%;top:25%}
+
+/* shoulders */
+#shoulders{
+  position:absolute;width:250px;height:76px;left:50%;top:50%;
+  margin-left:-125px;margin-top:-38px;background:#f3c5a4;
+  border:3px solid #9e6c4f;border-radius:45px;transform-origin:center;
+  transition:transform .7s cubic-bezier(.2,.8,.2,1);z-index:3
+}
+.shoulder-dot{
+  position:absolute;width:58px;height:58px;top:6px;background:#f3c5a4;
+  border:3px solid #9e6c4f;border-radius:50%
+}
+.shoulder-dot.left{left:-18px}.shoulder-dot.right{right:-18px}
+.shoulder-line{position:absolute;left:10%;top:36px;width:80%;height:3px;background:#795548}
+.shoulder-label{
+  position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+  background:rgba(255,255,255,.76);padding:3px 7px;border-radius:8px;
+  color:#7b4f32;font-size:11px;font-weight:bold
+}
+
+/* head */
+#head{
+  position:absolute;width:190px;height:220px;left:50%;top:50%;
+  margin-left:-95px;margin-top:-110px;background:#efc2a3;border:4px solid #9e6c4f;
+  border-radius:48%;transform-origin:center;
+  transition:transform .48s cubic-bezier(.2,.7,.2,1);z-index:6
+}
+.sagittal{position:absolute;left:50%;top:36px;width:3px;height:148px;background:#6f4d38}
+.lambdoid1,.lambdoid2{position:absolute;top:80px;width:66px;height:3px;background:#6f4d38}
+.lambdoid1{left:35px;transform:rotate(30deg)}
+.lambdoid2{right:35px;transform:rotate(-30deg)}
+.posterior-fontanelle{
+  position:absolute;left:50%;top:73px;transform:translateX(-50%) rotate(45deg);
+  width:18px;height:18px;background:#1565c0;border:2px solid #fff;
+  box-shadow:0 0 0 2px #1565c0
+}
+.occiput-arrow{
+  position:absolute;left:50%;top:2px;transform:translateX(-50%);
+  width:0;height:0;border-left:18px solid transparent;border-right:18px solid transparent;
+  border-bottom:33px solid #1565c0
+}
+.occiput-label{
+  position:absolute;left:50%;top:-28px;transform:translateX(-50%);
+  color:#1565c0;font-size:11px;font-weight:bold;white-space:nowrap
+}
+.model-status{text-align:center;margin-top:12px}
+.model-status .main{font-size:34px;font-weight:bold;color:var(--pink)}
+.model-status .sub{margin-top:4px;color:var(--muted)}
+
+/* question / buttons */
+h2{margin:0;color:var(--pink)}
+.task-title{
+  font-size:14px;font-weight:bold;color:#512da8;background:#ede7f6;
+  display:inline-block;padding:7px 11px;border-radius:999px;margin-bottom:9px
+}
+.question{
+  background:#fff8e1;border-radius:15px;padding:17px;line-height:1.65;font-size:17px;
+  border:1px solid #ffe0b2
+}
+.question strong.next{color:var(--pink);font-size:18px}
+.pv-box{
+  background:#eef6ff;border-left:5px solid var(--blue);border-radius:12px;
+  padding:14px;margin:12px 0;line-height:1.55
+}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}
+button{border:0;border-radius:12px;padding:12px 14px;font-size:15px;cursor:pointer}
+.answer{background:#fff;border:2px solid #d7dde6;transition:.15s}
+.answer:hover{border-color:var(--blue);transform:translateY(-1px)}
+.rotation-controls{
+  display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin:14px 0
+}
+.rotate-btn{
+  min-width:165px;background:#e8edf3;color:#263238;font-weight:bold;
+  border:2px solid transparent
+}
+.rotate-btn:hover{border-color:#90caf9}
+.btn-pink{background:var(--pink);color:#fff}
+.btn-gray{background:#e9edf2;color:#263238}
+
+/* prominent correctness banner */
+.result-banner{
+  display:none;margin-top:13px;border-radius:15px;padding:14px 16px;
+  font-size:20px;font-weight:800;text-align:center;border:3px solid transparent
+}
+.result-banner.good{display:block;background:var(--green-bg);color:var(--green);border-color:#66bb6a}
+.result-banner.bad{display:block;background:var(--red-bg);color:var(--red);border-color:#ef5350}
+.result-banner.warn{display:block;background:#fff8e1;color:var(--amber);border-color:#ffb74d}
+
+.feedback{
+  min-height:58px;padding:13px 14px;border-radius:12px;margin-top:9px;line-height:1.5
+}
+.feedback.default{background:#f5f6f8;color:#475569}
+.feedback.good{background:#edf7ee;color:#1b5e20}
+.feedback.bad{background:#fff1f2;color:#b71c1c}
+.feedback.warn{background:#fff8e1;color:#e65100}
+.path{
+  background:#f5f5f5;padding:11px;border-radius:10px;text-align:center;
+  font-weight:bold;margin-top:10px;line-height:1.5
+}
+.footer-controls{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.note{
+  margin-top:15px;background:#fafafa;border-radius:12px;padding:12px;
+  font-size:12px;color:#667085;line-height:1.5
+}
+
+/* summary */
+#summaryPanel{display:none}
+.summary-title{
+  background:linear-gradient(90deg,#e8f5e9,#f1f8e9);border-left:6px solid #43a047;
+  border-radius:14px;padding:15px;margin-bottom:14px
+}
+.summary-table{width:100%;border-collapse:collapse;font-size:14px}
+.summary-table th,.summary-table td{
+  border-bottom:1px solid #e5e7eb;padding:10px 8px;text-align:left;vertical-align:top
+}
+.summary-table th{width:34%;color:#475569}
+.performance{
+  margin-top:13px;background:#eef6ff;border-radius:12px;padding:13px;line-height:1.5
+}
+
+/* animations */
+.shake{animation:shake .28s linear 0s 2}
+@keyframes shake{
+  0%{transform:translateX(0)}25%{transform:translateX(-8px)}
+  50%{transform:translateX(8px)}75%{transform:translateX(-6px)}100%{transform:translateX(0)}
+}
+.flash-good{animation:flashGood .8s ease}
+@keyframes flashGood{
+  0%,100%{box-shadow:0 0 0 0 rgba(67,160,71,0)}
+  50%{box-shadow:0 0 0 15px rgba(67,160,71,.22)}
+}
+.flash-ap{animation:flashAP 1.2s ease}
+@keyframes flashAP{
+  0%,100%{box-shadow:0 0 0 0 rgba(46,125,50,0)}
+  50%{box-shadow:0 0 0 15px rgba(46,125,50,.25)}
+}
+
+@media(max-width:1000px){
+  .app{grid-template-columns:1fr}
+  .pelvis{transform:scale(.86)}
+  .stage-wrap{min-height:520px}
+}
+@media(max-width:650px){
+  .answers{grid-template-columns:1fr}
+  .progress{grid-template-columns:repeat(4,1fr)}
+  .pelvis{transform:scale(.68)}
+  .stage-wrap{min-height:415px}
+}
+
+/* ===== INTRO / LANDING SCREEN ===== */
+body.intro-open{overflow:hidden}
+#introScreen{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(255,255,255,.23), transparent 28%),
+    radial-gradient(circle at 85% 85%, rgba(255,255,255,.15), transparent 30%),
+    linear-gradient(135deg,#ad1457 0%,#d81b60 48%,#7b1fa2 100%);
+}
+.intro-card{
+  width:min(760px,94vw);background:rgba(255,255,255,.98);
+  border-radius:28px;padding:34px 34px 30px;
+  box-shadow:0 28px 80px rgba(60,0,40,.30);
+  text-align:center;
+}
+.intro-icon{
+  width:92px;height:92px;margin:0 auto 14px;border-radius:50%;
+  display:grid;place-items:center;background:#fce4ec;color:#c2185b;
+  font-size:48px;box-shadow:inset 0 0 0 3px #f8bbd0;
+}
+.intro-card h1{margin:4px 0 5px;color:#ad1457;font-size:34px;line-height:1.15}
+.intro-sub{color:#475569;font-size:17px;margin:0 auto 18px;line-height:1.55}
+.intro-goals{
+  text-align:left;background:#f8fafc;border:1px solid #e2e8f0;
+  border-radius:16px;padding:16px 18px;margin:18px 0;
+  line-height:1.6;color:#334155
+}
+.intro-goals b{color:#ad1457}
+.intro-note{
+  background:#fff8e1;border-left:5px solid #ffb300;border-radius:12px;
+  padding:12px 14px;text-align:left;color:#6d4c41;font-size:14px;line-height:1.5
+}
+.start-btn{
+  margin-top:22px;border:0;border-radius:16px;padding:15px 30px;
+  background:linear-gradient(90deg,#c2185b,#ec407a);color:white;
+  font-size:19px;font-weight:800;cursor:pointer;
+  box-shadow:0 8px 22px rgba(194,24,91,.28);transition:.18s
+}
+.start-btn:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(194,24,91,.34)}
+.start-btn:active{transform:translateY(0)}
+.intro-footer{margin-top:14px;color:#94a3b8;font-size:12px}
+@media(max-width:620px){
+  .intro-card{padding:26px 20px 22px}.intro-card h1{font-size:28px}.intro-icon{width:78px;height:78px;font-size:40px}
+}
+
+</style>
+</head>
+
+<body class="intro-open">
+
+<div id="introScreen" role="dialog" aria-modal="true" aria-labelledby="introTitle">
+  <div class="intro-card">
+    <div class="intro-icon" aria-hidden="true">↻</div>
+    <h1 id="introTitle">Birth Rotation Lab</h1>
+    <p class="intro-sub">
+      สื่ออิเล็กทรอนิกส์แบบโต้ตอบสำหรับฝึกทำความเข้าใจ<br>
+      <b>Mechanism of Labour: Fetal Head & Shoulder Rotation</b>
+    </p>
+
+    <div class="intro-goals">
+      <b>ใน 1 case นักศึกษาจะได้ฝึก</b><br>
+      ① อ่าน PV findings และระบุ fetal position<br>
+      ② เลือกกลไกที่ควรเกิดขึ้นต่อ<br>
+      ③ หมุนศีรษะไปสู่ OA และระบุองศาการหมุน<br>
+      ④ เชื่อม Extension → Restitution → External rotation<br>
+      ⑤ สังเกตการหมุนของ shoulders จาก oblique → AP diameter
+    </div>
+
+    <div class="intro-note">
+      <b>มุมมองของสื่อ:</b> ใช้ fixed top view ตลอดบทเรียน โดยด้านบนคือ
+      symphysis pubis และด้านล่างคือ sacrum ปุ่ม “ตาม/ทวนเข็มนาฬิกา”
+      อ้างอิงจากภาพที่เห็นบนจอนี้เสมอ
+    </div>
+
+    <button class="start-btn" onclick="startLearning()">เริ่มเรียน</button>
+    <div class="intro-footer">Interactive nursing education prototype</div>
+  </div>
+</div>
+
+<header>
+  <h1>PV Birth Rotation Challenge</h1>
+  <p>ฝึกคิดจาก PV → ระบุตำแหน่ง → เลือกกลไก → หมุนจริง → คำนวณองศา → Restitution → External rotation</p>
+</header>
+
+<div class="app">
+
+<section class="card">
+  <div class="topbar">
+    <span id="leftStagePill" class="pill stage">PV Challenge</span>
+    <span id="scorePill" class="pill score">ผ่านครั้งแรก 0 / 0 ขั้น</span>
+  </div>
+
+  <div class="stage-wrap">
+    <div class="pelvis" id="pelvis">
+      <div class="anterior">Symphysis pubis<br><span class="small">ด้านหน้า</span></div>
+      <div class="posterior">Sacrum<br><span class="small">ด้านหลัง</span></div>
+      <div class="side-left">Maternal RIGHT</div>
+      <div class="side-right">Maternal LEFT</div>
+
+      <div class="pos pOA">OA<br>0°</div>
+      <div class="pos pLOA">LOA<br>45°</div>
+      <div class="pos pLOT">LOT<br>90°</div>
+      <div class="pos pLOP">LOP<br>135°</div>
+      <div class="pos pOP">OP<br>180°</div>
+      <div class="pos pROP">ROP<br>135°</div>
+      <div class="pos pROT">ROT<br>90°</div>
+      <div class="pos pROA">ROA<br>45°</div>
+
+      <div id="shoulders">
+        <div class="shoulder-dot left"></div>
+        <div class="shoulder-dot right"></div>
+        <div class="shoulder-line"></div>
+        <div class="shoulder-label">SHOULDERS</div>
+      </div>
+
+      <div id="head">
+        <div class="occiput-arrow"><div class="occiput-label">OCCIPUT</div></div>
+        <div class="sagittal"></div>
+        <div class="lambdoid1"></div>
+        <div class="lambdoid2"></div>
+        <div class="posterior-fontanelle"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="model-status">
+    <div class="main" id="modelMain">?</div>
+    <div class="sub" id="modelSub">อ่านข้อมูล PV แล้วระบุตำแหน่ง</div>
+  </div>
+</section>
+
+<section class="card" id="challengeCard">
+  <div class="topbar">
+    <h2>🎯 Challenge Mode</h2>
+    <span id="caseNo" class="pill stage">Case 1</span>
+  </div>
+
+  <div class="progress">
+    <div class="step active" id="step1">1 Position</div>
+    <div class="step" id="step2">2 Next</div>
+    <div class="step" id="step3">3 Rotate</div>
+    <div class="step" id="step4">4 Degree</div>
+    <div class="step" id="step5">5 Extension</div>
+    <div class="step" id="step6">6 Restitution</div>
+    <div class="step" id="step7">7 External</div>
+  </div>
+
+  <div id="challengePanel">
+    <div id="taskTitle" class="task-title">ขั้นที่ 1</div>
+    <div id="question" class="question"></div>
+    <div id="pvBox" class="pv-box"></div>
+    <div id="answers" class="answers"></div>
+
+    <div id="rotationControls" class="rotation-controls" style="display:none">
+      <button class="rotate-btn" onclick="attemptInternalRotation(-1)">↺ หมุนทวนเข็มนาฬิกา 45°</button>
+      <button class="rotate-btn" onclick="attemptInternalRotation(1)">หมุนตามเข็มนาฬิกา 45° ↻</button>
+    </div>
+
+    <div id="restitutionControls" class="rotation-controls" style="display:none">
+      <button class="rotate-btn" onclick="attemptRestitution(-1)">↺ หมุนทวนเข็มนาฬิกา 45°</button>
+      <button class="rotate-btn" onclick="attemptRestitution(1)">หมุนตามเข็มนาฬิกา 45° ↻</button>
+    </div>
+
+    <div id="externalControls" class="rotation-controls" style="display:none">
+      <button class="rotate-btn" onclick="attemptExternalRotation(-1)">↺ หมุนทวนเข็มนาฬิกา 45°</button>
+      <button class="rotate-btn" onclick="attemptExternalRotation(1)">หมุนตามเข็มนาฬิกา 45° ↻</button>
+    </div>
+
+    <div id="resultBanner" class="result-banner"></div>
+    <div id="path" class="path">—</div>
+    <div id="feedback" class="feedback default">เริ่มจากอ่านข้อมูล PV</div>
+  </div>
+
+  <div id="summaryPanel">
+    <div class="summary-title">
+      <h2 style="color:#1b5e20;margin-bottom:5px">✓ เฉลยสรุป Case นี้</h2>
+      <div id="summaryIntro"></div>
+    </div>
+    <table class="summary-table" id="summaryTable"></table>
+    <div class="performance" id="performanceBox"></div>
+    <div style="margin-top:14px">
+      <button class="btn-pink" onclick="newCase()">ทำโจทย์ข้อถัดไป</button>
+    </div>
+  </div>
+
+  <div class="footer-controls" id="footerControls">
+    <button class="btn-pink" onclick="newCase()">สุ่มเคสใหม่</button>
+    <button class="btn-gray" onclick="restartCurrentCase()">เริ่มเคสนี้ใหม่</button>
+    <button class="btn-gray" onclick="resetScore()">ล้างคะแนน</button>
+  </div>
+
+  <div class="note">
+    <b>สำคัญ:</b> ปุ่ม “ตาม/ทวนเข็มนาฬิกา” อ้างอิงจาก <b>fixed top view</b> ที่เห็นบนจอนี้เสมอ
+    โดยด้านบนของภาพคือ symphysis pubis และด้านล่างคือ sacrum
+    <br>สื่อ 2 มิตินี้เน้น spatial reasoning เรื่องตำแหน่งและการหมุน จึงแสดง <b>Extension</b> เป็นคำถามเชิงลำดับกลไก
+    แต่ไม่ได้จำลองการเหยียดศีรษะในระนาบ sagittal
+  </div>
+</section>
+
+</div>
+
+<script>
+/* =========================================================
+   ORIENTATION
+   CSS positive degree = clockwise on screen.
+
+   Position map in FIXED TOP VIEW:
+   0 OA, 1 LOA, 2 LOT, 3 LOP, 4 OP, 5 ROP, 6 ROT, 7 ROA
+
+   IMPORTANT FIX:
+   headAngle is CONTINUOUS, e.g. ROA 315° -> OA 360°
+   rather than 315° -> 0°. This guarantees the animation
+   always follows the direction the student actually selected.
+========================================================= */
+
+const positions = ["OA","LOA","LOT","LOP","OP","ROP","ROT","ROA"];
+const challengePositions = [1,2,3,5,6,7];
+
+const pvDescriptions = {
+  1:{pf:"posterior fontanelle อยู่ด้านซ้าย-หน้า (left anterior) ของ maternal pelvis",suture:"sagittal suture อยู่ในแนว oblique",answer:"LOA"},
+  2:{pf:"posterior fontanelle อยู่ด้านซ้ายของ maternal pelvis",suture:"sagittal suture อยู่ในแนว transverse",answer:"LOT"},
+  3:{pf:"posterior fontanelle อยู่ด้านซ้าย-หลัง (left posterior) ของ maternal pelvis",suture:"sagittal suture อยู่ในแนว oblique",answer:"LOP"},
+  5:{pf:"posterior fontanelle อยู่ด้านขวา-หลัง (right posterior) ของ maternal pelvis",suture:"sagittal suture อยู่ในแนว oblique",answer:"ROP"},
+  6:{pf:"posterior fontanelle อยู่ด้านขวาของ maternal pelvis",suture:"sagittal suture อยู่ในแนว transverse",answer:"ROT"},
+  7:{pf:"posterior fontanelle อยู่ด้านขวา-หน้า (right anterior) ของ maternal pelvis",suture:"sagittal suture อยู่ในแนว oblique",answer:"ROA"}
+};
+
+let caseNumber=0, currentCase=null, stage=1, phase="";
+let headAngle=0, shoulderAngle=0;
+let internalMoves=0, internalPath=[];
+let locked=false;
+let firstTryScore=0, completedScoredStages=0;
+let stageHadError=false;
+let mistakes={position:0,next:0,rotation:0,degree:0,extension:0,restitution:0,external:0};
+
+/* ---------- helpers ---------- */
+function randomFrom(a){return a[Math.floor(Math.random()*a.length)]}
+function shuffle(a){
+  const c=[...a];
+  for(let i=c.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [c[i],c[j]]=[c[j],c[i]];
+  }
+  return c;
+}
+function normIndexFromAngle(angle){
+  return ((Math.round(angle/45)%8)+8)%8;
+}
+function currentPosition(){return positions[normIndexFromAngle(headAngle)]}
+function sideOfCase(i){return (i>=1&&i<=3)?"left":"right"}
+
+function expectedInternalDirection(i){
+  return (i>=1&&i<=3)?-1:1;
+}
+function expectedInternalSteps(i){
+  return (i>=1&&i<=3)?i:8-i;
+}
+function expectedInternalDegrees(i){return expectedInternalSteps(i)*45}
+function directionWord(dir){return dir===-1?"ทวนเข็มนาฬิกา":"ตามเข็มนาฬิกา"}
+
+function optimalInternalPath(i){
+  let idx=i; const out=[positions[idx]], dir=expectedInternalDirection(i);
+  while(idx!==0){idx=(idx+dir+8)%8;out.push(positions[idx])}
+  return out;
+}
+function expectedRestitutionDirection(i){
+  // internal rotation is reversed during restitution
+  return -expectedInternalDirection(i);
+}
+function restitutionPosition(i){
+  return sideOfCase(i)==="left"?"LOA":"ROA";
+}
+function expectedExternalDirection(i){
+  // head continues in same screen direction as restitution
+  return expectedRestitutionDirection(i);
+}
+function externalPosition(i){
+  return sideOfCase(i)==="left"?"LOT":"ROT";
+}
+function shoulderOblique(i){return sideOfCase(i)==="left"?45:-45}
+function shoulderAP(i){return sideOfCase(i)==="left"?90:-90}
+
+/* ---------- rendering ---------- */
+function renderModel(){
+  document.getElementById("head").style.transform=`rotate(${headAngle}deg)`;
+  document.getElementById("shoulders").style.transform=`rotate(${shoulderAngle}deg)`;
+  updateModelStatus();
+}
+function updateModelStatus(){
+  const m=document.getElementById("modelMain"), s=document.getElementById("modelSub");
+  if(stage===1){m.textContent="?";s.textContent="ระบุ fetal position จาก PV findings"}
+  else if(stage===2){m.textContent=currentCase.position;s.textContent="เลือกว่าควรทำอะไรต่อ"}
+  else if(stage===3){m.textContent=currentPosition();s.textContent=`หมุนแล้ว ${internalMoves*45}°`}
+  else if(stage===4){m.textContent="OA";s.textContent="คำนวณองศา internal rotation"}
+  else if(stage===5){m.textContent="OA";s.textContent="ศีรษะยังต้องคลอดด้วย Extension"}
+  else if(stage===6){m.textContent=currentPosition();s.textContent="นักศึกษากำหนด Restitution"}
+  else if(stage===7){m.textContent=currentPosition();s.textContent="External rotation / shoulders"}
+  else{m.textContent="AP";s.textContent="Shoulders อยู่ใน AP diameter ของ pelvic outlet"}
+}
+function setProgress(n){
+  for(let i=1;i<=7;i++){
+    const e=document.getElementById(`step${i}`);e.className="step";
+    if(i<n)e.classList.add("done");
+    if(i===n)e.classList.add("active");
+    if(n>7)e.classList.add("done");
+  }
+}
+function setTaskTitle(t){document.getElementById("taskTitle").textContent=t}
+function setFeedback(type,html){
+  const f=document.getElementById("feedback");f.className=`feedback ${type}`;f.innerHTML=html
+}
+function showResult(type,title){
+  const b=document.getElementById("resultBanner");
+  b.className=`result-banner ${type}`;
+  b.textContent=title;
+}
+function clearResult(){
+  const b=document.getElementById("resultBanner");b.className="result-banner";b.textContent=""
+}
+function animateWrong(){
+  const c=document.getElementById("challengeCard");
+  c.classList.remove("shake");void c.offsetWidth;c.classList.add("shake")
+}
+function flashCorrect(){
+  const h=document.getElementById("head");
+  h.classList.remove("flash-good");void h.offsetWidth;h.classList.add("flash-good")
+}
+function updateScore(){
+  document.getElementById("scorePill").textContent=`ผ่านครั้งแรก ${firstTryScore} / ${completedScoredStages} ขั้น`
+}
+function beginScoredStage(){stageHadError=false}
+function markWrong(key){
+  stageHadError=true; mistakes[key]=(mistakes[key]||0)+1
+}
+function completeScoredStage(){
+  completedScoredStages++;
+  if(!stageHadError)firstTryScore++;
+  updateScore()
+}
+function hideControls(){
+  document.getElementById("rotationControls").style.display="none";
+  document.getElementById("restitutionControls").style.display="none";
+  document.getElementById("externalControls").style.display="none"
+}
+function hidePV(){document.getElementById("pvBox").style.display="none"}
+function setChoices(choices,callback){
+  const box=document.getElementById("answers");box.innerHTML="";
+  choices.forEach(x=>{
+    const b=document.createElement("button");b.className="answer";
+    b.innerHTML=x.label;b.onclick=()=>callback(x.value);box.appendChild(b)
+  })
+}
+
+/* ---------- new case ---------- */
+function newCase(){
+  caseNumber++;
+  const startIndex=randomFrom(challengePositions);
+  currentCase={startIndex,position:positions[startIndex]};
+  mistakes={position:0,next:0,rotation:0,degree:0,extension:0,restitution:0,external:0};
+  document.getElementById("caseNo").textContent=`Case ${caseNumber}`;
+  document.getElementById("summaryPanel").style.display="none";
+  document.getElementById("challengePanel").style.display="block";
+  document.getElementById("footerControls").style.display="flex";
+  startPositionStage()
+}
+function restartCurrentCase(){
+  if(!currentCase){newCase();return}
+  mistakes={position:0,next:0,rotation:0,degree:0,extension:0,restitution:0,external:0};
+  document.getElementById("summaryPanel").style.display="none";
+  document.getElementById("challengePanel").style.display="block";
+  startPositionStage()
+}
+function resetScore(){
+  firstTryScore=0;completedScoredStages=0;updateScore();newCase()
+}
+
+/* =========================================================
+   1 POSITION
+========================================================= */
+function startPositionStage(){
+  stage=1;phase="position";locked=false;beginScoredStage();
+  headAngle=currentCase.startIndex*45;
+  shoulderAngle=shoulderOblique(currentCase.startIndex);
+  setProgress(1);setTaskTitle("① งานของนักศึกษา: ระบุ fetal position");
+  document.getElementById("question").innerHTML=
+    `<strong class="next">คุณควรทำอะไรตอนนี้?</strong><br>
+     อ่าน PV findings แล้วระบุ fetal position จากตำแหน่งของ posterior fontanelle / occiput`;
+  const d=pvDescriptions[currentCase.startIndex];
+  const pv=document.getElementById("pvBox");pv.style.display="block";
+  pv.innerHTML=`<b>PV findings</b><br>• ${d.pf}<br>• ${d.suture}<br>• คลำ posterior fontanelle ได้ชัด`;
+  hideControls();clearResult();
+  document.getElementById("path").textContent="PV findings → ? fetal position";
+  const correct=currentCase.position;
+  const wrong=shuffle(positions.filter(x=>x!==correct)).slice(0,3);
+  setChoices(shuffle([correct,...wrong]).map(x=>({label:x,value:x})),answerPosition);
+  setFeedback("default","ใช้ posterior fontanelle เป็น landmark ของ occiput");
+  renderModel()
+}
+function answerPosition(choice){
+  if(locked)return;
+  if(choice!==currentCase.position){
+    markWrong("position");animateWrong();showResult("bad","✗ ยังไม่ถูก — ลองอีกครั้ง");
+    setFeedback("bad","ตรวจใหม่ว่า posterior fontanelle อยู่ด้านซ้าย/ขวา และด้านหน้า/หลังของ maternal pelvis");
+    return
+  }
+  locked=true;completeScoredStage();showResult("good","✓ ถูกต้อง");
+  setFeedback("good",`ตำแหน่งคือ <b>${currentCase.position}</b>`);
+  flashCorrect();setTimeout(startNextActionStage,650)
+}
+
+/* =========================================================
+   2 WHAT NEXT?
+========================================================= */
+function startNextActionStage(){
+  stage=2;phase="next";locked=false;beginScoredStage();setProgress(2);
+  hidePV();hideControls();clearResult();setTaskTitle("② งานของนักศึกษา: เลือกสิ่งที่ควรทำต่อ");
+  document.getElementById("question").innerHTML=
+    `<strong class="next">เมื่อระบุตำแหน่ง ${currentCase.position} ได้แล้ว ขั้นต่อไปควรทำอะไร?</strong>`;
+  setChoices([
+    {label:"หมุน occiput ไปด้านหน้าเข้าสู่ OA (Internal rotation)",value:"internal"},
+    {label:"ทำ Restitution ทันที",value:"rest"},
+    {label:"ทำ External rotation ทันที",value:"external"},
+    {label:"หมุนไหล่เข้าสู่ AP ทันที",value:"shoulder"}
+  ],answerNextAction);
+  document.getElementById("path").textContent=`${currentCase.position} → ?`;
+  setFeedback("default","คิดตามลำดับกลไกและเป้าหมายของ occiput");
+  renderModel()
+}
+function answerNextAction(v){
+  if(locked)return;
+  if(v!=="internal"){
+    markWrong("next");animateWrong();showResult("bad","✗ ยังไม่ใช่ขั้นตอนถัดไป");
+    setFeedback("bad","ขณะนี้ศีรษะยังไม่ได้หมุนเข้าสู่ OA จึงต้องเกิด <b>Internal rotation</b> ก่อน");
+    return
+  }
+  locked=true;completeScoredStage();showResult("good","✓ ถูกต้อง — Internal rotation");
+  setFeedback("good","ต่อไปให้คุณเลือกทิศการหมุนเองทีละ 45°");
+  setTimeout(startInternalRotationStage,650)
+}
+
+/* =========================================================
+   3 INTERNAL ROTATION
+========================================================= */
+function startInternalRotationStage(){
+  stage=3;phase="rotation";locked=false;beginScoredStage();setProgress(3);
+  headAngle=currentCase.startIndex*45;
+  shoulderAngle=shoulderOblique(currentCase.startIndex);
+  internalMoves=0;internalPath=[currentCase.position];
+  document.getElementById("answers").innerHTML="";hidePV();hideControls();clearResult();
+  document.getElementById("rotationControls").style.display="flex";
+  setTaskTitle("③ งานของนักศึกษา: หมุนศีรษะไปสู่ OA");
+  document.getElementById("question").innerHTML=
+    `<strong class="next">คุณควรหมุนศีรษะทารกไปทางใด?</strong><br>
+     กด <b>ทวน</b> หรือ <b>ตามเข็มนาฬิกา</b> ทีละ 45° จน occiput ถึง OA`;
+  updateInternalPath();
+  setFeedback("default","ภาพจะหมุนไปในทิศเดียวกับปุ่มที่กดจริง หากเลือกผิด ระบบจะไม่ขยับศีรษะ");
+  renderModel()
+}
+function attemptInternalRotation(dir){
+  if(stage!==3||locked)return;
+  const expected=expectedInternalDirection(currentCase.startIndex);
+  if(dir!==expected){
+    markWrong("rotation");animateWrong();showResult("bad",`✗ ผิดทิศ — ${directionWord(dir)} ไม่ถูก`);
+    setFeedback("bad",`Occiput ต้องเคลื่อนไปทางด้านหน้า / symphysis pubis สำหรับเคสนี้`);
+    return
+  }
+
+  /* CONTINUOUS ANGLE: the key visual-direction fix */
+  headAngle += dir*45;
+  internalMoves++;
+  internalPath.push(currentPosition());
+  clearResult();
+  showResult("good",`✓ ทิศถูก — ${directionWord(dir)} 45°`);
+  setFeedback("good",`ตำแหน่งปัจจุบัน: <b>${currentPosition()}</b>`);
+  updateInternalPath();renderModel();
+
+  if(normIndexFromAngle(headAngle)===0){
+    locked=true;completeScoredStage();
+    setFeedback("good",`Occiput ถึง <b>OA</b> แล้ว`);
+    setTimeout(startDegreeStage,700)
+  }
+}
+function updateInternalPath(){
+  document.getElementById("path").textContent=`${internalPath.join(" → ")} | ${internalMoves} × 45°`
+}
+
+/* =========================================================
+   4 DEGREE
+========================================================= */
+function startDegreeStage(){
+  stage=4;phase="degree";locked=false;beginScoredStage();setProgress(4);
+  hideControls();clearResult();setTaskTitle("④ งานของนักศึกษา: ระบุองศาการหมุน");
+  document.getElementById("question").innerHTML=
+    `<strong class="next">ศีรษะหมุนจาก ${currentCase.position} → OA รวมกี่องศา?</strong><br>
+     ใช้เส้นทางที่คุณเพิ่งหมุนและหลัก 1 step = 45°`;
+  setChoices([45,90,135,180].map(x=>({label:`${x}°`,value:x})),answerDegree);
+  document.getElementById("path").textContent=optimalInternalPath(currentCase.startIndex).join(" → ");
+  setFeedback("default","นับจำนวนช่วง × 45°");renderModel()
+}
+function answerDegree(v){
+  if(locked)return;
+  const correct=expectedInternalDegrees(currentCase.startIndex);
+  if(v!==correct){
+    markWrong("degree");animateWrong();showResult("bad","✗ องศายังไม่ถูก");
+    setFeedback("bad",`${optimalInternalPath(currentCase.startIndex).join(" → ")} = ${expectedInternalSteps(currentCase.startIndex)} step`);
+    return
+  }
+  locked=true;completeScoredStage();showResult("good",`✓ ถูกต้อง — ${correct}°`);
+  setFeedback("good",`${expectedInternalSteps(currentCase.startIndex)} × 45° = <b>${correct}°</b>`);
+  setTimeout(startExtensionTransitionStage,700)
+}
+
+/* =========================================================
+   5 NEXT MECHANISM = EXTENSION
+========================================================= */
+function startExtensionTransitionStage(){
+  stage=5;phase="extension";locked=false;beginScoredStage();setProgress(5);
+  hideControls();clearResult();setTaskTitle("⑤ งานของนักศึกษา: ระบุกลไกถัดไป");
+  document.getElementById("question").innerHTML=
+    `<strong class="next">เมื่อศีรษะหมุนเข้าสู่ OA แล้ว กลไกใดทำให้ศีรษะคลอดออกใต้ symphysis pubis ก่อนเกิด restitution?</strong>`;
+  setChoices([
+    {label:"Extension",value:"extension"},
+    {label:"Restitution",value:"rest"},
+    {label:"External rotation",value:"external"},
+    {label:"Engagement",value:"engagement"}
+  ],answerExtension);
+  document.getElementById("path").textContent="Internal rotation → ? → Restitution";
+  setFeedback("default","คิดตามลำดับ cardinal movements ของการคลอดศีรษะ");renderModel()
+}
+function answerExtension(v){
+  if(locked)return;
+  if(v!=="extension"){
+    markWrong("extension");animateWrong();showResult("bad","✗ ลำดับกลไกยังไม่ถูก");
+    setFeedback("bad","หลัง internal rotation ศีรษะต้อง <b>Extension</b> เพื่อคลอดออกมาก่อน จึงเกิด restitution");
+    return
+  }
+  locked=true;completeScoredStage();showResult("good","✓ ถูกต้อง — Extension");
+  setFeedback("good","ในสื่อ 2 มิตินี้ไม่จำลองการเหยียดใน sagittal plane จากนี้ถือว่า <b>ศีรษะคลอดแล้ว</b>");
+  setTimeout(startRestitutionStage,800)
+}
+
+/* =========================================================
+   6 RESTITUTION — STUDENT DOES IT
+========================================================= */
+function startRestitutionStage(){
+  stage=6;phase="restitution";locked=false;beginScoredStage();setProgress(6);
+  /* maintain continuous OA angle: left cases usually 0°, right cases usually 360° */
+  shoulderAngle=shoulderOblique(currentCase.startIndex);
+  document.getElementById("answers").innerHTML="";hideControls();clearResult();
+  document.getElementById("restitutionControls").style.display="flex";
+  setTaskTitle("⑥ งานของนักศึกษา: ทำ Restitution");
+  document.getElementById("question").innerHTML=
+    `<strong class="next">หลังศีรษะคลอดแล้ว คุณควรหมุนศีรษะไปทางใดเพื่อ restitution?</strong><br>
+     เลือกทิศที่ทำให้ศีรษะกลับมา align กับ shoulders ซึ่งยังอยู่ในแนว oblique`;
+  document.getElementById("path").textContent=`OA → ? | shoulders ยังอยู่แนว oblique`;
+  setFeedback("default","คุณเป็นผู้กำหนด restitution เอง ระบบจะไม่หมุนให้อัตโนมัติ");renderModel()
+}
+function attemptRestitution(dir){
+  if(stage!==6||locked)return;
+  const expected=expectedRestitutionDirection(currentCase.startIndex);
+  if(dir!==expected){
+    markWrong("restitution");animateWrong();showResult("bad",`✗ Restitution ผิดทิศ`);
+    setFeedback("bad",`เลือกอีกครั้ง: ศีรษะควรหมุนกลับเพื่อ align กับ shoulders`);
+    return
+  }
+
+  headAngle += dir*45; // continuous, exact selected direction
+  locked=true;completeScoredStage();
+  showResult("good",`✓ Restitution ถูก — ${directionWord(dir)} 45°`);
+  setFeedback("good",`ศีรษะ: OA → <b>${currentPosition()}</b> และกลับมาสัมพันธ์กับแนวไหล่`);
+  document.getElementById("path").textContent=`OA → ${currentPosition()} | shoulders: oblique`;
+  renderModel();
+  setTimeout(startExternalTransitionStage,750)
+}
+
+/* =========================================================
+   7 EXTERNAL — first ask what next, then direction.
+========================================================= */
+function startExternalTransitionStage(){
+  stage=7;phase="external-name";locked=false;beginScoredStage();setProgress(7);
+  hideControls();clearResult();setTaskTitle("⑦ งานของนักศึกษา: ระบุกลไกและทิศ External rotation");
+  document.getElementById("question").innerHTML=
+    `<strong class="next">หลัง restitution แล้ว ขั้นต่อไปควรเกิดอะไร?</strong>`;
+  setChoices([
+    {label:"External rotation ซึ่งสัมพันธ์กับ internal rotation ของ shoulders",value:"external"},
+    {label:"Internal rotation ของศีรษะซ้ำอีกครั้ง",value:"internal"},
+    {label:"Flexion ของศีรษะ",value:"flexion"},
+    {label:"Engagement",value:"engagement"}
+  ],answerExternalName);
+  document.getElementById("path").textContent=`Restitution (${currentPosition()}) → ?`;
+  setFeedback("default","เลือกกลไกถัดไปก่อน แล้วจึงเลือกทิศการหมุน");renderModel()
+}
+function answerExternalName(v){
+  if(locked)return;
+  if(v!=="external"){
+    markWrong("external");animateWrong();showResult("bad","✗ กลไกถัดไปยังไม่ถูก");
+    setFeedback("bad","หลัง restitution จะเห็น <b>External rotation</b> ของศีรษะ ซึ่งสะท้อนการหมุนภายในของ shoulders");
+    return
+  }
+
+  /* keep same scored stage; an earlier error still affects first-try score */
+  phase="external-direction";
+  document.getElementById("answers").innerHTML="";
+  clearResult();hideControls();document.getElementById("externalControls").style.display="flex";
+  document.getElementById("question").innerHTML=
+    `<strong class="next">External rotation ควรหมุนศีรษะไปทางใด?</strong><br>
+     เลือก <b>ทวน</b> หรือ <b>ตามเข็มนาฬิกา</b> 45°`;
+  setFeedback("default","เมื่อเลือกถูก ศีรษะจะหมุนตามปุ่ม และระบบจะแสดง shoulders หมุนจาก oblique → AP อัตโนมัติ")
+}
+function attemptExternalRotation(dir){
+  if(stage!==7||phase!=="external-direction"||locked)return;
+  const expected=expectedExternalDirection(currentCase.startIndex);
+  if(dir!==expected){
+    markWrong("external");animateWrong();showResult("bad","✗ External rotation ผิดทิศ");
+    setFeedback("bad","ระบบยังไม่ขยับภาพ ให้เลือกทิศใหม่");
+    return
+  }
+
+  headAngle += dir*45; // exact continuous direction
+  locked=true;completeScoredStage();
+  showResult("good",`✓ External rotation ถูก — ${directionWord(dir)} 45°`);
+  setFeedback("good",`ศีรษะหมุนถึง <b>${currentPosition()}</b><br>ต่อไปดู shoulders เคลื่อนจาก oblique → AP อัตโนมัติ`);
+  document.getElementById("path").textContent=
+    `Head: ${restitutionPosition(currentCase.startIndex)} → ${currentPosition()} | Shoulders: oblique → AP`;
+  renderModel();
+
+  setTimeout(()=>{
+    shoulderAngle=shoulderAP(currentCase.startIndex);
+    renderModel();
+    const s=document.getElementById("shoulders");
+    s.classList.remove("flash-ap");void s.offsetWidth;s.classList.add("flash-ap");
+    setTimeout(finishCase,950)
+  },700)
+}
+
+/* =========================================================
+   FINAL SUMMARY
+========================================================= */
+function finishCase(){
+  stage=8;phase="summary";setProgress(8);hideControls();
+  document.getElementById("challengePanel").style.display="none";
+  document.getElementById("footerControls").style.display="none";
+  document.getElementById("summaryPanel").style.display="block";
+
+  const i=currentCase.startIndex;
+  const idir=expectedInternalDirection(i);
+  const rdir=expectedRestitutionDirection(i);
+  const edir=expectedExternalDirection(i);
+  const totalMistakes=Object.values(mistakes).reduce((a,b)=>a+b,0);
+
+  document.getElementById("summaryIntro").innerHTML=
+    `ตำแหน่งเริ่มต้น <b>${currentCase.position}</b> — ทบทวนลำดับทั้งหมดของข้อนี้`;
+
+  document.getElementById("summaryTable").innerHTML=`
+    <tr><th>1. PV → Position</th><td><b>${currentCase.position}</b></td></tr>
+    <tr><th>2. สิ่งที่ควรทำต่อ</th><td>Internal rotation ของ occiput ไปด้านหน้าเข้าสู่ OA</td></tr>
+    <tr><th>3. Internal rotation</th>
+        <td><b>${directionWord(idir)}</b> • ${optimalInternalPath(i).join(" → ")}</td></tr>
+    <tr><th>4. องศาการหมุน</th>
+        <td>${expectedInternalSteps(i)} × 45° = <b>${expectedInternalDegrees(i)}°</b></td></tr>
+    <tr><th>5. กลไกก่อนศีรษะคลอด</th>
+        <td><b>Extension</b> → ศีรษะคลอดออกใต้ symphysis pubis</td></tr>
+    <tr><th>6. Restitution</th>
+        <td><b>${directionWord(rdir)} 45°</b> • OA → ${restitutionPosition(i)} เพื่อกลับมา align กับ shoulders</td></tr>
+    <tr><th>7. External rotation</th>
+        <td><b>${directionWord(edir)} 45°</b> • ${restitutionPosition(i)} → ${externalPosition(i)}</td></tr>
+    <tr><th>Shoulders</th>
+        <td>Internal rotation จากแนว <b>oblique → AP diameter</b> ของ pelvic outlet</td></tr>
+  `;
+
+  const detail = Object.entries(mistakes)
+    .filter(([k,v])=>v>0)
+    .map(([k,v])=>`${k}: ${v} ครั้ง`)
+    .join(" • ");
+
+  document.getElementById("performanceBox").innerHTML=
+    totalMistakes===0
+    ? `🌟 <b>ทำถูกตั้งแต่ครั้งแรกทุกขั้นของเคสนี้</b>`
+    : `มีการลองผิดทั้งหมด <b>${totalMistakes} ครั้ง</b>${detail?`<br>${detail}`:""}<br>
+       แนะนำให้ทบทวนเฉพาะขั้นที่ผิดก่อนทำข้อถัดไป`;
+
+  document.getElementById("modelMain").textContent="AP";
+  document.getElementById("modelSub").textContent="จบเคส: shoulders อยู่ใน AP diameter"
+}
+
+
+function startLearning(){
+  const intro=document.getElementById("introScreen");
+  if(intro){
+    intro.style.transition="opacity .28s ease";
+    intro.style.opacity="0";
+    setTimeout(()=>{intro.remove();document.body.classList.remove("intro-open")},280);
+  }
+}
+
+/* init */
+updateScore();
+newCase();
+</script>
+</body>
+</html>
